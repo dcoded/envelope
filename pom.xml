@@ -46,6 +46,7 @@
     <jmockit.version>1.22</jmockit.version>
     <h2.version>1.4.193</h2.version>
     <curator.version>2.12.0</curator.version>
+    <spark-xml.version>0.4.1</spark-xml.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -242,7 +243,7 @@
     <dependency>
       <groupId>com.databricks</groupId>
       <artifactId>spark-xml_${scala.version}</artifactId>
-      <version>0.4.1</version>
+      <version>${spark-xml.version}</version>
     </dependency>
   </dependencies>
 
