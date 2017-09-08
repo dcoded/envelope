@@ -47,6 +47,7 @@ public class TestFileSystemInput {
   private static final String CSV_DATA = "/filesystem/sample-fs.csv";
   private static final String JSON_DATA = "/filesystem/sample-fs.json";
   private static final String TEXT_DATA = "/filesystem/sample-fs.txt";
+  private static final String XML_DATA = "/filesystem/sample-fs.xml";
 
   private Config config;
 
@@ -187,7 +188,7 @@ public class TestFileSystemInput {
     paramMap.put(FileSystemInput.PATH_CONFIG, FileSystemInput.class.getResource(CSV_DATA).getPath());
     paramMap.put(FileSystemInput.CSV_HEADER_CONFIG, "true");
     paramMap.put(FileSystemInput.FIELD_NAMES_CONFIG, Lists.newArrayList("A Long", "An Int", "A String",
-        "Another String"));
+            "Another String"));
     paramMap.put(FileSystemInput.FIELD_TYPES_CONFIG, Lists.newArrayList("long", "int", "string", "string"));
     config = ConfigFactory.parseMap(paramMap);
 
@@ -207,12 +208,12 @@ public class TestFileSystemInput {
   @Test
   public void readCsvWithAvroSchema() throws Exception {
     StringBuilder avroLiteral = new StringBuilder()
-      .append("{ \"type\" : \"record\", \"name\" : \"example\", \"fields\" : [")
-      .append("{ \"name\" : \"A_Long\", \"type\" : \"long\" },")
-      .append("{ \"name\" : \"An_Int\", \"type\" : \"int\" },")
-      .append("{ \"name\" : \"A_String\", \"type\" : \"string\" },")
-      .append("{ \"name\" : \"Another_String\", \"type\" : \"string\" }")
-      .append("] }");
+            .append("{ \"type\" : \"record\", \"name\" : \"example\", \"fields\" : [")
+            .append("{ \"name\" : \"A_Long\", \"type\" : \"long\" },")
+            .append("{ \"name\" : \"An_Int\", \"type\" : \"int\" },")
+            .append("{ \"name\" : \"A_String\", \"type\" : \"string\" },")
+            .append("{ \"name\" : \"Another_String\", \"type\" : \"string\" }")
+            .append("] }");
 
     Map<String, Object> paramMap = new HashMap<>();
     paramMap.put(FileSystemInput.FORMAT_CONFIG, "csv");
@@ -294,6 +295,35 @@ public class TestFileSystemInput {
     assertEquals("field1", first.schema().fields()[0].name());
     assertEquals(DataTypes.IntegerType, first.schema().fields()[0].dataType());
   }
+
+  @Test
+  public void readXmlNoSchema() throws Exception {
+    Map<String, Object> paramMap = new HashMap<>();
+    paramMap.put(FileSystemInput.FORMAT_CONFIG, "xml");
+    paramMap.put(FileSystemInput.PATH_CONFIG, FileSystemInput.class.getResource(XML_DATA).getPath());
+    paramMap.put(FileSystemInput.XML_ROW_TAG_CONFIG, "book");
+    config = ConfigFactory.parseMap(paramMap);
+
+    FileSystemInput xmlInput = new FileSystemInput();
+    xmlInput.configure(config);
+
+    Dataset<Row> dataFrame = xmlInput.read();
+
+    dataFrame.printSchema();
+    dataFrame.show();
+
+    assertEquals(3, dataFrame.count());
+    assertTrue (dataFrame.count() > 0);
+    Row first = dataFrame.first();
+    //assertEquals();
+    //...
+
+  }
+
+//  @Test
+//  public void readXmlWithSchema() throws Exception {
+//
+//  }
 
   @Test (expected = RuntimeException.class)
   public void readInputFormatMissingInputFormat() throws Exception {
@@ -381,24 +411,24 @@ public class TestFileSystemInput {
     assertEquals("Invalid first row result", 0L, results.first().getLong(0));
     assertEquals("Invalid first row result", "One,Two,Three,Four", results.first().getString(1));
   }
-  
+
   @Test
   public void readTextWithoutTranslator() throws Exception {
     Map<String, Object> configMap = Maps.newHashMap();
     configMap.put(FileSystemInput.FORMAT_CONFIG, FileSystemInput.TEXT_FORMAT);
     configMap.put(FileSystemInput.PATH_CONFIG, FileSystemInput.class.getResource(TEXT_DATA).getPath());
     config = ConfigFactory.parseMap(configMap);
-    
+
     FileSystemInput formatInput = new FileSystemInput();
     formatInput.configure(config);
-    
+
     Dataset<Row> results = formatInput.read();
-    
+
     assertEquals(2, results.count());
     assertTrue(results.collectAsList().contains(RowFactory.create("a=1,b=hello,c=true")));
     assertTrue(results.collectAsList().contains(RowFactory.create("a=2,b=world,c=false")));
   }
-  
+
   @Test
   public void readTextWithTranslator() throws Exception {
     Map<String, Object> configMap = Maps.newHashMap();
@@ -410,12 +440,12 @@ public class TestFileSystemInput {
     configMap.put("translator.field.names", Lists.newArrayList("a", "b", "c"));
     configMap.put("translator.field.types", Lists.newArrayList("int", "string", "boolean"));
     config = ConfigFactory.parseMap(configMap);
-    
+
     FileSystemInput formatInput = new FileSystemInput();
     formatInput.configure(config);
-    
+
     Dataset<Row> results = formatInput.read();
-    
+
     assertEquals(2, results.count());
     assertTrue(results.collectAsList().contains(RowFactory.create(1, "hello", true)));
     assertTrue(results.collectAsList().contains(RowFactory.create(2, "world", false)));

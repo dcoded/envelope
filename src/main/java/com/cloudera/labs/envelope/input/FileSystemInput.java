@@ -25,6 +25,7 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -74,6 +75,17 @@ public class FileSystemInput implements BatchInput {
   public static final String CSV_MAX_CHARS_COLUMN_CONFIG = "max-chars-per-column";
   public static final String CSV_MAX_MALFORMED_LOG_CONFIG = "max-malformed-logged";
   public static final String CSV_MODE_CONFIG = "mode";
+  public static final String XML_CHARSET_CONFIG = "charset";
+  public static final String XML_IGNORE_WHITESPACE_CONFIG = "ignoreSurroundingSpaces";
+  // XML parameters
+  public static final String XML_ROW_TAG_CONFIG = "rowTag";
+  public static final String XML_EXCLUDE_ATTR_CONFIG = "excludeAttribute";
+  public static final String XML_MODE_CONFIG = "mode";
+  public static final String XML_SAMPLING_RATIO_CONFIG = "samplingRatio";
+  public static final String XML_NULL_EMPTY_VALS_CONFIG = "treatEmptyValuesAsNulls";
+  public static final String XML_CORRUPT_RECORD_COLNAME_CONFIG = "columnNameOfCorruptRecord";
+  public static final String XML_ATTR_PREFIX_CONFIG = "attributePrefix";
+  public static final String XML_VALUE_TAG_CONFIG = "valueTag";
 
   // InputFormat mandatory parameters
   public static final String INPUT_FORMAT_TYPE_CONFIG = "format-class";
@@ -83,6 +95,7 @@ public class FileSystemInput implements BatchInput {
   public static final String CSV_FORMAT = "csv";
   public static final String PARQUET_FORMAT = "parquet";
   public static final String JSON_FORMAT = "json";
+  public static final String XML_FORMAT = "xml";
   public static final String INPUT_FORMAT_FORMAT = "input-format";
   public static final String TEXT_FORMAT = "text";
 
@@ -104,9 +117,9 @@ public class FileSystemInput implements BatchInput {
 
     if (config.getString(FORMAT_CONFIG).equals(CSV_FORMAT) || config.getString(FORMAT_CONFIG).equals(JSON_FORMAT)) {
       if ((config.hasPath(FIELD_NAMES_CONFIG) || config.hasPath(FIELD_TYPES_CONFIG)) &&
-          (config.hasPath(AVRO_LITERAL_CONFIG) || config.hasPath(AVRO_FILE_CONFIG))) {
+              (config.hasPath(AVRO_LITERAL_CONFIG) || config.hasPath(AVRO_FILE_CONFIG))) {
         throw new RuntimeException(String.format("Filesystem input has too many schema parameters set. Set either '%s' " +
-            "and '%s', or '%s', or '%s'", FIELD_NAMES_CONFIG, FIELD_TYPES_CONFIG, AVRO_FILE_CONFIG, AVRO_LITERAL_CONFIG));
+                "and '%s', or '%s', or '%s'", FIELD_NAMES_CONFIG, FIELD_TYPES_CONFIG, AVRO_FILE_CONFIG, AVRO_LITERAL_CONFIG));
 
       } else if (config.hasPath(FIELD_NAMES_CONFIG) || config.hasPath(FIELD_TYPES_CONFIG)) {
 
@@ -124,7 +137,7 @@ public class FileSystemInput implements BatchInput {
       } else if (config.hasPath(AVRO_FILE_CONFIG) || config.hasPath(AVRO_LITERAL_CONFIG)) {
         if (config.hasPath(AVRO_FILE_CONFIG) && config.hasPath(AVRO_LITERAL_CONFIG)) {
           throw new RuntimeException(String.format("Filesystem input cannot have both schema parameters defined, '%s' and '%s'",
-              AVRO_FILE_CONFIG, AVRO_LITERAL_CONFIG));
+                  AVRO_FILE_CONFIG, AVRO_LITERAL_CONFIG));
         }
 
         Schema avroSchema;
@@ -153,25 +166,39 @@ public class FileSystemInput implements BatchInput {
 
     if (config.getString(FORMAT_CONFIG).equals(CSV_FORMAT)) {
       options = new ConfigUtils.OptionMap(config)
-          .resolve("sep", CSV_SEPARATOR_CONFIG)
-          .resolve("encoding", CSV_ENCODING_CONFIG)
-          .resolve("quote", CSV_QUOTE_CONFIG)
-          .resolve("escape", CSV_ESCAPE_CONFIG)
-          .resolve("comment", CSV_COMMENT_CONFIG)
-          .resolve("header", CSV_HEADER_CONFIG)
-          .resolve("inferSchema", CSV_INFER_SCHEMA_CONFIG)
-          .resolve("ignoreLeadingWhiteSpace", CSV_IGNORE_LEADING_CONFIG)
-          .resolve("ignoreTrailingWhiteSpace", CSV_IGNORE_TRAILING_CONFIG)
-          .resolve("nullValue", CSV_NULL_VALUE_CONFIG)
-          .resolve("nanValue", CSV_NAN_VALUE_CONFIG)
-          .resolve("positiveInf", CSV_POS_INF_CONFIG)
-          .resolve("negativeInf", CSV_NEG_INF_CONFIG)
-          .resolve("dateFormat", CSV_DATE_CONFIG)
-          .resolve("timestampFormat", CSV_TIMESTAMP_CONFIG)
-          .resolve("maxColumns", CSV_MAX_COLUMNS_CONFIG)
-          .resolve("maxCharsPerColumn", CSV_MAX_CHARS_COLUMN_CONFIG)
-          .resolve("maxMalformedLogPerPartition", CSV_MAX_MALFORMED_LOG_CONFIG)
-          .resolve("mode", CSV_MODE_CONFIG);
+              .resolve("sep", CSV_SEPARATOR_CONFIG)
+              .resolve("encoding", CSV_ENCODING_CONFIG)
+              .resolve("quote", CSV_QUOTE_CONFIG)
+              .resolve("escape", CSV_ESCAPE_CONFIG)
+              .resolve("comment", CSV_COMMENT_CONFIG)
+              .resolve("header", CSV_HEADER_CONFIG)
+              .resolve("inferSchema", CSV_INFER_SCHEMA_CONFIG)
+              .resolve("ignoreLeadingWhiteSpace", CSV_IGNORE_LEADING_CONFIG)
+              .resolve("ignoreTrailingWhiteSpace", CSV_IGNORE_TRAILING_CONFIG)
+              .resolve("nullValue", CSV_NULL_VALUE_CONFIG)
+              .resolve("nanValue", CSV_NAN_VALUE_CONFIG)
+              .resolve("positiveInf", CSV_POS_INF_CONFIG)
+              .resolve("negativeInf", CSV_NEG_INF_CONFIG)
+              .resolve("dateFormat", CSV_DATE_CONFIG)
+              .resolve("timestampFormat", CSV_TIMESTAMP_CONFIG)
+              .resolve("maxColumns", CSV_MAX_COLUMNS_CONFIG)
+              .resolve("maxCharsPerColumn", CSV_MAX_CHARS_COLUMN_CONFIG)
+              .resolve("maxMalformedLogPerPartition", CSV_MAX_MALFORMED_LOG_CONFIG)
+              .resolve("mode", CSV_MODE_CONFIG);
+    }
+
+    if (config.getString(FORMAT_CONFIG).equals(XML_FORMAT)) {
+      options = new ConfigUtils.OptionMap(config)
+              .resolve("rowTag", XML_ROW_TAG_CONFIG)
+              .resolve("excludeAttribute", XML_EXCLUDE_ATTR_CONFIG)
+              .resolve("mode", XML_MODE_CONFIG)
+              .resolve("samplingRatio", XML_SAMPLING_RATIO_CONFIG)
+              .resolve("treatEmptyValuesAsNulls", XML_NULL_EMPTY_VALS_CONFIG)
+              .resolve("columnNameOfCorruptRecord", XML_CORRUPT_RECORD_COLNAME_CONFIG)
+              .resolve("attributePrefix", XML_ATTR_PREFIX_CONFIG)
+              .resolve("valueTag", XML_VALUE_TAG_CONFIG)
+              .resolve("charset", XML_CHARSET_CONFIG)
+              .resolve("ignoreSurroundingSpaces", XML_IGNORE_WHITESPACE_CONFIG);
     }
 
     if (config.getString(FORMAT_CONFIG).equals(INPUT_FORMAT_FORMAT)) {
@@ -216,19 +243,22 @@ public class FileSystemInput implements BatchInput {
       case TEXT_FORMAT:
         fs = readText(path);
         break;
+      case XML_FORMAT:
+        fs = readXML(path);
+        break;
       default:
         throw new RuntimeException("Filesystem input format not supported: " + format);
     }
 
     return fs;
   }
-  
+
   private Dataset<Row> readParquet(String path) {
     LOG.debug("Reading Parquet: {}", path);
 
     return Contexts.getSparkSession().read().parquet(path);
   }
-  
+
   private Dataset<Row> readJSON(String path) {
     LOG.debug("Reading JSON: {}", path);
 
@@ -238,7 +268,7 @@ public class FileSystemInput implements BatchInput {
       return Contexts.getSparkSession().read().json(path);
     }
   }
-  
+
   private Dataset<Row> readCSV(String path) {
     LOG.debug("Reading CSV: {}", path);
 
@@ -248,7 +278,24 @@ public class FileSystemInput implements BatchInput {
       return Contexts.getSparkSession().read().options(options).csv(path);
     }
   }
-  
+
+  private Dataset<Row> readXML(String path) {
+    LOG.debug("Reading XML: {}", path);
+    LOG.debug("Using config: {}", config);
+
+    DataFrameReader dfReader = Contexts.getSparkSession()
+            .read()
+            .options(options)
+            .format("com.databricks.spark.xml");
+
+    if (null != schema) {
+      LOG.debug("Using schema");
+      dfReader = dfReader.schema(schema);
+    }
+
+    return dfReader.load(path);
+  }
+
   @SuppressWarnings({ "rawtypes", "unchecked" })
   private Dataset<Row> readInputFormat(String path) throws Exception {
     String inputType = config.getString(INPUT_FORMAT_TYPE_CONFIG);
@@ -264,28 +311,28 @@ public class FileSystemInput implements BatchInput {
     @SuppressWarnings("resource")
     JavaSparkContext context = new JavaSparkContext(Contexts.getSparkSession().sparkContext());
     JavaPairRDD<?, ?> rdd = context.newAPIHadoopFile(path, typeClazz, keyClazz, valueClazz, new Configuration());
-    
+
     TranslateFunction translateFunction = new TranslateFunction(config.getConfig("translator"));
 
     return Contexts.getSparkSession().createDataFrame(rdd.flatMap(translateFunction), translateFunction.getSchema());
   }
-  
+
   private Dataset<Row> readText(String path) throws Exception {
     Dataset<Row> lines = Contexts.getSparkSession().read().text(path);
 
     if (config.hasPath("translator")) {
       Dataset<Tuple2<String, String>> keyedLines = lines.map(
-          new PrepareLineForTranslationFunction(), Encoders.tuple(Encoders.STRING(), Encoders.STRING()));
-      
+              new PrepareLineForTranslationFunction(), Encoders.tuple(Encoders.STRING(), Encoders.STRING()));
+
       TranslateFunction<String, String> translateFunction = new TranslateFunction<>(config.getConfig("translator"));
-      
+
       return keyedLines.flatMap(translateFunction, RowEncoder.apply(translateFunction.getSchema()));
     }
     else {
       return lines;
     }
   }
-  
+
   @SuppressWarnings("serial")
   private static class PrepareLineForTranslationFunction implements MapFunction<Row, Tuple2<String, String>> {
     @Override

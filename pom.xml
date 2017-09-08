@@ -1,12 +1,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  
+
   <groupId>com.cloudera.labs</groupId>
   <artifactId>envelope</artifactId>
   <version>0.4.0</version>
   <packaging>jar</packaging>
-  
+
   <name>Envelope</name>
   <inceptionYear>2016</inceptionYear>
   <description>Envelope is an Apache Spark application framework for implementing streaming and batch data pipelines on
@@ -30,7 +30,7 @@
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
   </developers>
-  
+
   <properties>
     <scala.version>2.11</scala.version>
     <spark.version>2.1.0.cloudera1</spark.version>
@@ -48,14 +48,14 @@
     <curator.version>2.12.0</curator.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
-  
+
   <repositories>
     <repository>
       <id>cloudera</id>
       <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
     </repository>
   </repositories>
-  
+
   <dependencies>
     <dependency>
       <groupId>org.apache.spark</groupId>
@@ -239,8 +239,13 @@
       <version>${curator.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.databricks</groupId>
+      <artifactId>spark-xml_${scala.version}</artifactId>
+      <version>0.4.1</version>
+    </dependency>
   </dependencies>
-  
+
   <build>
     <plugins>
       <plugin>
